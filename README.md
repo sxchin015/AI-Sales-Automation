@@ -56,32 +56,82 @@ User Submits Lead --> Webhook Trigger (n8n)
 - \`POST /api/crm/push\` - Pushes scored leads to the CRM.
 - \`GET /api/health\` - Healthcheck point for Kubernetes/Docker.
 
-## ⚙️ Setup Instructions
+## ⚙️ Setup Instructions (Run From Scratch)
 
-### Running Locally (Standard Python)
-1. **Clone the repo**
-2. **Install requirements:** \`pip install -r requirements.txt\`
-3. **Run Postgres:** Ensure Postgres is running locally on port 5432.
-4. **Set Environment Variables:** Create a \`.env\` file with \`DATABASE_URL\` and \`OPENAI_API_KEY\`.
-5. **Run Backend:** \`cd backend && uvicorn main:app --reload\`
-6. **Run Dashboard:** \`cd dashboard && streamlit run dashboard.py\`
+### 1. Prerequisites
+- Python 3.10+ installed
+- Node.js and npm installed (for running n8n locally)
+- Git installed
 
-### Building & Running with Docker (Recommended)
-You can launch the entire stack (Database, API, Dashboard) using Docker Compose:
-
+### 2. Clone the Repository
 \`\`\`bash
-cd docker
-docker-compose up -d --build
+git clone https://github.com/sxchin015/AI-Sales-Automation.git
+cd AI-Sales-Automation
 \`\`\`
 
-- **FastAPI Backend:** http://localhost:8000/docs
-- **Streamlit Dashboard:** http://localhost:8501
+### 3. Setup Python Backend & Dashboard
+Open a terminal in the project root:
+\`\`\`bash
+# Create and activate virtual environment
+python -m venv venv
+venv\\Scripts\\activate   # On Windows
+# source venv/bin/activate # On Mac/Linux
 
-### Connecting n8n
-1. Setup a free self-hosted instance of n8n or use the cloud version.
-2. In n8n, click *Import from File* and select \`n8n-workflows/sales_automation_workflow.json\`.
-3. Update the HTTP nodes to point to your deployed FastAPI endpoints (or ngrok if running locally).
-4. Activate the Webhook and send a test \`POST\` request to the n8n webhook URL.
+# Install dependencies
+pip install -r requirements.txt
+
+# Environment Variables
+# Create a .env file in the root with your API keys:
+echo OPENAI_API_KEY=your_openai_api_key > .env
+\`\`\`
+
+#### Start the FastAPI Backend
+Open a new terminal (activate venv first):
+\`\`\`bash
+cd backend
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+\`\`\`
+- API Docs: http://127.0.0.1:8000/docs
+
+#### Start the Streamlit Dashboard
+Open another new terminal (activate venv first):
+\`\`\`bash
+cd dashboard
+streamlit run dashboard.py --server.port 8501
+\`\`\`
+- Dashboard UI: http://localhost:8501
+
+### 4. Setup and Run n8n Automation
+n8n is the workflow automation tool that orchestrates the data. To run it locally without Docker:
+
+\`\`\`bash
+# Install n8n globally via npm
+npm install -g n8n
+
+# Start n8n
+n8n
+\`\`\`
+- n8n Editor UI: http://localhost:5678
+
+**Importing the Workflow:**
+1. Open http://localhost:5678 in your browser.
+2. Click on **Workflows** in the left sidebar, then click **Add Workflow**.
+3. In the top right corner menu (three dots), select **Import from File**.
+4. Choose the \`n8n-workflows/sales_automation_workflow.json\` file from this repository.
+5. The workflow will populate with a Webhook trigger, HTTP requests to your FastAPI backend, and an Email node.
+6. **Activate** the workflow by toggling the switch in the top right.
+
+### 5. Testing the System
+Once all 3 services are running (FastAPI, Streamlit, n8n), test the workflow:
+1. Copy the **Test URL** from your n8n Webhook node.
+2. Send a POST request to the Webhook URL using Postman or cURL:
+\`\`\`bash
+curl -X POST http://localhost:5678/webhook-test/new-lead \\
+-H "Content-Type: application/json" \\
+-d '{"name": "John Doe", "email": "john@example.com", "company": "TechCorp", "job_title": "CEO"}'
+\`\`\`
+3. Watch the n8n execution UI to see the data flow to your FastApi backend, get enriched, scored, and logged into the SQLite/Postgres DB.
+4. Refresh your Streamlit dashboard (http://localhost:8501) to see the new lead!
 
 ## 🚀 Deployment Guide
 
