@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+openai
+streamlit
+python-dotenv
+pydantic
+email-validator

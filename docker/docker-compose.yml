@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sales_agent
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    working_dir: /app/backend
+    volumes:
+      - ../backend:/app/backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/sales_agent
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-YOUR_OPENAI_API_KEY}
+    depends_on:
+      - db
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: streamlit run dashboard.py --server.port=8501 --server.address=0.0.0.0
+    working_dir: /app/dashboard
+    volumes:
+      - ../dashboard:/app/dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/sales_agent
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

@@ -1,0 +1,226 @@
+{
+  "name": "AI Autonomous Sales Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-lead",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "12345-mock-webhook-id"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{$json[\"body\"][\"name\"]}}"
+            },
+            {
+              "name": "email",
+              "value": "={{$json[\"body\"][\"email\"]}}"
+            },
+            {
+              "name": "company",
+              "value": "={{$json[\"body\"][\"company\"]}}"
+            },
+            {
+              "name": "job_title",
+              "value": "={{$json[\"body\"][\"job_title\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Process Lead via FastAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"body\"][\"status\"]}}",
+              "value2": "success"
+            }
+          ]
+        }
+      },
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"body\"][\"category\"]}}",
+              "operation": "equal",
+              "value2": "Hot"
+            }
+          ]
+        }
+      },
+      "name": "Is Hot Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        850,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/crm/push",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "lead_id",
+              "value": "={{$node[\"Process Lead via FastAPI\"].json[\"body\"][\"lead_id\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Push to CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sales@automation.com",
+        "toEmail": "={{$node[\"Webhook Trigger\"].json[\"body\"][\"email\"]}}",
+        "subject": "={{$node[\"Process Lead via FastAPI\"].json[\"body\"][\"email_subject\"]}}",
+        "text": "={{$node[\"Process Lead via FastAPI\"].json[\"body\"][\"email_body\"]}}",
+        "options": {}
+      },
+      "name": "Send Outreach Email (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        260
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "smtp_mock_credentials",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.noop",
+      "typeVersion": 1,
+      "position": [
+        850,
+        450
+      ],
+      "notes": "Trigger if API backend fails or duplicate lead"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Process Lead via FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Lead via FastAPI": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Is Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Push to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push to CRM": {
+      "main": [
+        [
+          {
+            "node": "Send Outreach Email (SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "mock-n8n-id-portfolio"
+}
